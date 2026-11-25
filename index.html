@@ -16,7 +16,29 @@ function save(){try{localStorage.setItem(key,JSON.stringify([...opened]))}catch(
 function render(){const n=unlocked();grid.replaceChildren();for(let i=1;i<=24;i++){const b=document.createElement('button');const isOpen=opened.has(i),locked=i>n; b.type='button';b.className='door'+(locked?' locked':'')+(isOpen?' opened':'')+(i===n&&!preview?' today':'')+(i===24?' special':'');b.setAttribute('aria-label','Día '+i+(locked?', bloqueado':isOpen?', abierto':', disponible'));b.innerHTML='<span class="status" aria-hidden="true">'+(locked?'🔒':isOpen?'✓':'♡')+'</span><span class="symbol" aria-hidden="true">'+(isOpen&&!locked?items[i-1][1]:i===24?'🎄':moments[i-1][0]==='Friends'?'☕':'⭐')+'</span><span class="num">'+i+'</span><span class="tiny">'+(i===24?'Navidad':isOpen?'Abierto':moments[i-1][0])+'</span>';b.addEventListener('click',()=>show(i));grid.append(b)}$('count').textContent=opened.size+' de 24 canciones descubiertas';$('fill').style.width=opened.size/24*100+'%';$('next').textContent=preview?'Vista previa':n===0?'Empieza el 1 de diciembre':n===24?'¡Feliz Navidad!': 'Hasta el día '+n+' disponible';}
 let timer;function notify(t){$('toast').textContent=t;$('toast').hidden=false;clearTimeout(timer);timer=setTimeout(()=>$('toast').hidden=true,3500)}
 let requestNumber=0;
+
+let issueCache=null, issueCacheTime=0;
 async function readDedication(i,request){
+ try {
+  if(!issueCache || Date.now()-issueCacheTime>10000){
+   const response=await fetch('https://api.github.com/repos/franciscobet/calendario-vivi/issues?state=all&creator=franciscobet&sort=updated&direction=desc&per_page=100',{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});
+   if(!response.ok)throw new Error('No disponible');
+   const rows=await response.json();if(!Array.isArray(rows))throw new Error('Respuesta incorrecta');
+   issueCache=rows;issueCacheTime=Date.now();
+  }
+  for(const issue of issueCache){
+   if(issue.pull_request||issue.user?.login?.toLowerCase()!=='franciscobet'||!issue.title.startsWith('[Vivi] Dedicatoria'))continue;
+   const body=(issue.body||'').replace(/\r\n/g,'\n');
+   const match=body.match(/^### Día de diciembre\s*\n\s*(\d{1,2})\s*\n\s*### Tu dedicatoria[ \t]*\n([\s\S]*)$/m);
+   if(match&&Number(match[1])===i&&match[2].trim()&&match[2].trim()!=='_No response_'){
+    if(request===requestNumber)$('letter').textContent=match[2].trim();return;
+   }
+  }
+ }catch(e){}
+ if(request===requestNumber)await readLegacyDedication(i,request);
+}
+
+async function readLegacyDedication(i,request){
  try { const response=await fetch('./dedicatorias.txt?v='+Date.now(),{cache:'no-store'}); if(!response.ok)throw new Error('No disponible'); const body=await response.text(); const lines=body.split(/\r?\n/); let day=0; const messages={}; for(const line of lines){const match=line.match(/^DIA\s+(\d{1,2})\s*:\s*(.*)$/i);if(match){day=Number(match[1]);messages[day]=match[2];}else if(day){messages[day]+='\n'+line;}} if(request===requestNumber)$('letter').textContent=(messages[i]||'').trim()||'Tu dedicatoria llegará pronto, mi pequeña consentida. ♡'; }catch(e){if(request===requestNumber)$('letter').textContent='No pude cargar tu mensaje. Vuelve a abrir esta ventanita en un ratito. ♡';}
 }
 function show(i){if(i>unlocked()){notify('Mi pequeña consentida, este regalito te espera el '+i+' de diciembre. 💗');return}const item=items[i-1];opened.add(i);save();render();$('emoji').textContent=item[1];$('day-label').textContent=i+' de diciembre · Para ti';$('modal-title').textContent=item[0];$('letter').textContent='Buscando tu dedicatoria…';readDedication(i,++requestNumber);$('activity').textContent=item[0]+' — '+item[3]+' · '+item[4];const q=encodeURIComponent(item[0]+' '+item[3]);$('listen').href='https://www.youtube.com/results?search_query='+q;$('spotify').href='https://open.spotify.com/search/'+q;const moment=moments[i-1];$('scene-tag').textContent=(moment[0]==='Friends'?'☕ ':'⭐ ')+moment[0];$('scene-title').textContent=moment[1];$('scene-text').textContent=moment[2];const sceneLink=$('scene-link');sceneLink.hidden=!moment[3];if(moment[3]){const direct=moment[3].startsWith('https://');sceneLink.href=direct?moment[3]:'https://www.youtube.com/results?search_query='+encodeURIComponent(moment[3]);sceneLink.textContent=direct?'▶ Ver escena':'▶ Buscar este momento en YouTube';}else{sceneLink.removeAttribute('href');}if(typeof modal.showModal==='function')modal.showModal();else modal.setAttribute('open','');}
