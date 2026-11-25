@@ -1,0 +1,45 @@
+name: "💌 Escribir una dedicatoria"
+description: "Elige el día y escribe tu mensaje para Vivi."
+title: "[Vivi] Dedicatoria"
+body:
+  - type: markdown
+    attributes:
+      value: "Escribe tu mensaje y pulsa Create o Submit new issue. Recuerda que los mensajes son públicos."
+  - type: dropdown
+    id: dia
+    attributes:
+      label: "Día de diciembre"
+      options:
+        - "01"
+        - "02"
+        - "03"
+        - "04"
+        - "05"
+        - "06"
+        - "07"
+        - "08"
+        - "09"
+        - "10"
+        - "11"
+        - "12"
+        - "13"
+        - "14"
+        - "15"
+        - "16"
+        - "17"
+        - "18"
+        - "19"
+        - "20"
+        - "21"
+        - "22"
+        - "23"
+        - "24"
+    validations:
+      required: true
+  - type: textarea
+    id: mensaje
+    attributes:
+      label: "Tu dedicatoria"
+      placeholder: "Mi pequeña consentida..."
+    validations:
+      required: true
